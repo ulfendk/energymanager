@@ -26,9 +26,15 @@
     <None Include="web.config">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <Content Include="DataFiles\carnot.json" />
-    <Content Include="DataFiles\energidataservice.json" />
-    <Content Include="DataFiles\nordpool.json" />
+    <Content Include="DataFiles\carnot.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="DataFiles\energidataservice.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="DataFiles\nordpool.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <Compile Include="Utils.fs" />
     <Compile Include="Model.fs" />
     <Compile Include="Carnot.fs" />
