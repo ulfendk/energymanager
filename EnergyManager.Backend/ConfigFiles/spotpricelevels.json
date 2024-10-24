@@ -1,7 +1,7 @@
 {
-  "free": 0.1,
-  "cheap": 1.1,
-  "normal": 2.2,
-  "expensive": 3.3,
-  "extreme": 4.4
+  "free": 0.0,
+  "cheap": 0.5,
+  "normal": 1.5,
+  "expensive": 2.5,
+  "extreme": 4.0
 }
