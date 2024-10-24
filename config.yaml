@@ -1,0 +1,39 @@
+name: "Energy Manager [DK]"
+version: "0.1.35"
+slug: energy_manager_dk
+description: >-
+  "Manage your energy consumption and costs."
+arch:
+  - amd64
+  - armhf
+  - aarch64
+url: "https://github.com/ulfendk/energymanager"
+startup: application
+webui: "http://[HOST]:[PORT:8099]"
+boot: auto
+ports:
+  "8099/tcp": 5999
+ports_description:
+  "8099/tcp": Application web interface
+hassio_role: homeassistant
+hassio_api: true
+homeassistant_api: true
+map:
+  - type: share
+    read_only: False
+  - type: ssl
+  - type: homeassistant_config
+    read_only: False
+    path: /config/ha
+auth_api: true
+ingress: true
+panel_icon: "mdi:power-settings"
+panel_title: "Energy Manager"
+panel_admin: false
+init: false
+watchdog: "http://[HOST]:[PORT:8099]/health"
+schema:
+  dk_region: list(dk1|dk2)
+  carnot_username: "str?"
+  carnot_api_key: "password?"
+  eloverblik_api_key: "password?"
