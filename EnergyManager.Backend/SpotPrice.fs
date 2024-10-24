@@ -9,15 +9,6 @@ open FSharp.Data
 open Microsoft.FSharp.Collections
 open Microsoft.FSharp.Core
 
-// type SpotPrice =
-//     { Hour : DateTimeOffset
-//       BasePriceVat : decimal<dkk/kWh>
-//       AllFeesAndVat: decimal<dkk/kWh>
-//       ReducedFeesAndVat: decimal<dkk/kWh>
-//       FullPriceReducedFeeVat: decimal<dkk/kWh>
-//       FullPriceVat : decimal<dkk/kWh>
-//       IsActual : bool }
-
 type SpotPriceLevel =
     | Free
     | Cheap
@@ -39,7 +30,6 @@ let levels = [ Free; Cheap; Normal; Expensive; Extreme; ]
 let spotPriceLevels =
     levels
     |> Seq.zip [ data.Free; data.Cheap; data.Normal; data.Expensive; data.Extreme ]
-    // |> Seq.sortByDescending (fun (k, _) -> k)
     |> Seq.toList
 
 let mergePricePoints (primary : PricePoint seq) (secondary : PricePoint seq) =
@@ -60,10 +50,6 @@ let private getLocalHour (timestamp : DateTimeOffset) =
     let localTimeStamp = timestamp.ToLocalTime()
     DateTimeOffset(localTimeStamp.Year, localTimeStamp.Month, localTimeStamp.Day, localTimeStamp.Hour, 0, 0, localTimeStamp.Offset)
     |> UnixDateTime.FromDateTime
-
-// let getCurrentTariff (timestamp : DateTimeOffset) (tariffs : HourlyFeeAndTariff seq) =
-//     let localHour = getLocalHour timestamp
-//     tariffs |> Seq.find (fun x-> x.Hour = localHour)
     
 let getCurrentPrice (timestamp : DateTimeOffset) (prices : PricePoint seq) =
     let localHour = getLocalHour timestamp
@@ -87,9 +73,6 @@ let mergePriceAndTariff (price : PricePoint) (tariff : IntervalFeeAndTariff) =
       IsComplete = true
       LastUpdated = price.LastUpdated }
     
-// let getSpotPricesff (prices : PricePoint seq) (tariffs : Map<UnixDateTimeInterval, IntervalFeeAndTariff>) =
-//     prices |> Seq.map (fun x -> getSpotPriceFromRecords x (getCurrentTariff x.Timestamp tariffs) )
-
 let getSpotPrice (prices: PricePoint seq) (tariffs : Map<UnixDateTimeInterval, IntervalFeeAndTariff>) (time : DateTimeOffset) =
     let toNode (ts : UnixDateTime) =
         { From = ts

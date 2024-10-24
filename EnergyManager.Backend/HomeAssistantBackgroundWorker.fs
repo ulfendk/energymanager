@@ -1,6 +1,7 @@
 module EnergyManager.Backend.HomeAssistantBackgroundWorker
 
 open System
+open System.Text.Json
 open System.Threading
 open EnergyManager.Backend.Database
 open EnergyManager.Backend.HomeAssistant
@@ -34,7 +35,7 @@ type HomeAssistantBackgroundWorker(api : HomeAssistantApi, repo : IDataRepositor
         let futurePrices =
             prices
             |> List.skip 1
-            |> List.map (_.FullPriceVat)
+            |> List.map (fun x -> (x.Timestamp.ToDateTimeOffset().ToIsoString(), x.FullPriceVat))
         let spotPricePayload =
             ValueSensor {
                 State = $"%M{price.FullPriceVat}"
@@ -44,7 +45,7 @@ type HomeAssistantBackgroundWorker(api : HomeAssistantApi, repo : IDataRepositor
                       Icon = Some "mdi:cash"
                       DeviceClass = Some "monetary"
                       UnitOfMeasurement = Some "DKK/kWh"
-                      ExtraValues = Some (String.Join(";", futurePrices)) } }
+                      ExtraValues = Some (JsonSerializer.Serialize(futurePrices)) }}
         api.SetEntity("spot_price", spotPricePayload) |> ignore
 
         setPrice("spot_price_reduced", "Spot Price Reduced", price.FullPriceReducedFeeVat, price.LastUpdated)
@@ -54,12 +55,10 @@ type HomeAssistantBackgroundWorker(api : HomeAssistantApi, repo : IDataRepositor
 
         let find (value: decimal) (lst : (decimal * SpotPriceLevel) list ) =
             let rec findRec (value: decimal) (acc : decimal * SpotPriceLevel) (lst : (decimal * SpotPriceLevel) list ) =
-                logger.LogInformation($"Value: %M{value}, ACC: %A{acc}")
                 let (accK, accV) = acc
                 match lst with
                 | head :: tail ->
                     let (k, v) = head
-                    logger.LogInformation($"Head value: %M{k}")
                     if value >= k then
                         findRec value head tail
                     else
@@ -105,6 +104,18 @@ type HomeAssistantBackgroundWorker(api : HomeAssistantApi, repo : IDataRepositor
                       UnitOfMeasurement = None
                       ExtraValues = None } }
         api.SetEntity("cheapest_24h", cheapestNextDayPayload) |> ignore
+
+        let cheapestNextDayPricePayload =
+            TextSensor {
+                State = $"%M{cheapest.FullPriceVat}"
+                LastUpdated =  Some (price.LastUpdated.ToDateTimeOffset())
+                Attributes = Some
+                    { FriendlyName = Some "Price at Cheapest Hour (24h)"
+                      Icon = Some "mdi:cash"
+                      DeviceClass = Some "monetary"
+                      UnitOfMeasurement = Some "DKK/kWh"
+                      ExtraValues = None } }
+        api.SetEntity("cheapest_price_24h", cheapestNextDayPricePayload) |> ignore
         
         logger.LogInformation("Done updating Home Assistant entities.")
     

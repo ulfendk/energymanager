@@ -12,7 +12,6 @@ open Microsoft.Extensions.Logging
 type PricesBackgroundWorker(repo : IDataRepository, eds : EnergiDataService.Config, carnotSource : CarnotSource, logger : ILogger<PricesBackgroundWorker>) =
     let getCarnot() = carnotSource.GetLatest()
     let getEds() = EnergiDataService.Data.getLatest eds
-    // let getTariffs() = Tariff.Data.getTariffs tariffs
     
     let mutable timer : Timer option = None
     
@@ -20,35 +19,13 @@ type PricesBackgroundWorker(repo : IDataRepository, eds : EnergiDataService.Conf
         { From = ts
           To = ts }
     let DoWork(state : obj) =
-        logger.LogInformation("Doing work...")
+        logger.LogInformation("Updating data in the background...")
         let tariffs = Tariff.Data2.getTariffTree
-        // let now = DateTimeOffset.Now
-        // // let key = Map.tryFindKey (fun key value -> ((key :> IComparable<UnixDateTime>).CompareTo (toUnixDateTime now)) = 0) qqq
-        // let now' = toNode (toUnixDateTime now)
-        // let node = Map.tryFind now' qqq
-        // let found =
-        //     match node with
-        //     | None -> 0L
-        //     | Some x -> (getSecondsFromTimestamp x.Interval.From)
-        // printf $"%A{found}"
-        // let tariff = Tariff.Data2.getTariffForHour (Utils.toUnixDateTime DateTimeOffset.Now) qqq
-//         let hours = Utils.getHoursInInterval (DateOnly(2024, 10, 26)) (DateOnly(2024, 10, 28)) |> Seq.map (fun x -> Utils.toDateTimeOffset x)
-//         // let localDateTime = Utils.toLocalDateTime (DateOnly(2024, 10, 1))
-//         // let localUnixTime = Utils.toUnixDateTime localDateTime
-//         // printf $"%A{localDateTime}\n" |> ignore
-//         // let xxx = Tariff.tree
-//         printf $"%A{hours}\n" |> ignore
         let eds = getEds()
-//         let carnot = getCarnot()
-//         let pricePoints = SpotPrice.mergePricePoints eds carnot
-//         // let tariffs = getTariffs()
+
         let spotPrices = eds |> Seq.map(fun x -> SpotPrice.mergePriceAndTariff x (Map.find (toNode x.Timestamp) tariffs))
         spotPrices |> repo.InsertOrUpdatePrices |> ignore 
-//         // spotPrices |> Seq.iter (fun x -> printf $"%A{x}") |> ignore
-//         
-// //        repo.InsertPrice(spotPrice) |> ignore
-//         let prices = repo.GetPrices 
-//         printf $"%A{prices}" |> ignore
+        logger.LogInformation("DONE updating data in the background.")
     
     interface IHostedService with
         member this.StartAsync cancellationToken =
