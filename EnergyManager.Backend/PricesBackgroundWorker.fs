@@ -22,9 +22,12 @@ type PricesBackgroundWorker(repo : IDataRepository, eds : EnergiDataService.Conf
           To = ts }
     let DoWork(state : obj) =
         logger.LogInformation("Updating data in the background...")
-        let eds = getEds()
 
-        let spotPrices = eds |> Seq.map(fun x -> spotPrices.MergePriceAndTariff x (Map.find (toNode x.Timestamp) tariffs.Configured))
+        let eds = getEds()
+        let carnot = getCarnot()
+        let pricePoints = spotPrices.MergePricePoints eds carnot
+
+        let spotPrices = pricePoints |> Seq.map(fun x -> spotPrices.MergePriceAndTariff x (Map.find (toNode x.Timestamp) tariffs.Configured))
         spotPrices |> repo.InsertOrUpdatePrices |> ignore 
         logger.LogInformation("DONE updating data in the background.")
     

@@ -110,7 +110,10 @@ type SpotPrices(config : Config) =
               LastUpdated = UnixDateTime.Now() }
 
     member this.MergePriceAndTariff (price : PricePoint) (tariff : IntervalFeeAndTariff) =
-        mergePriceAndTariff (price) (tariff)
+        mergePriceAndTariff price tariff
+        
+    member this.MergePricePoints (primary : PricePoint seq) (secondary : PricePoint seq) =
+        mergePricePoints primary secondary
     
     member this.ValidLevels = validLevels
     member this.SpotPriceLevels = spotPriceLevels

@@ -11,6 +11,10 @@ open Giraffe
 open Microsoft.Extensions.Hosting
 open Microsoft.Extensions.Logging
 
+type FuturePrice =
+    { Hour : string
+      Price : Decimal }
+
 type HomeAssistantBackgroundWorker(api : HomeAssistantApi, repo : IDataRepository, spotPrices : SpotPrices, logger : ILogger<HomeAssistantBackgroundWorker>) =
     let mutable timer : Timer option = None
 
@@ -45,7 +49,7 @@ type HomeAssistantBackgroundWorker(api : HomeAssistantApi, repo : IDataRepositor
                       Icon = Some "mdi:cash"
                       DeviceClass = Some "monetary"
                       UnitOfMeasurement = Some "DKK/kWh"
-                      ExtraValues = Some (JsonSerializer.Serialize(futurePrices)) }}
+                      ExtraValues = Some (futurePrices |> List.map (fun (h, p) -> { Hour = h; Price = p })) }}
         api.SetEntity("spot_price", spotPricePayload) |> ignore
 
         setPrice("spot_price_reduced", "Spot Price Reduced", price.FullPriceReducedFeeVat, price.LastUpdated)

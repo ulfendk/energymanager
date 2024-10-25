@@ -26,7 +26,7 @@ type EntityAttributes =
       UnitOfMeasurement : string option
       
       [<JsonPropertyName("extra_values")>]
-      ExtraValues : string option }
+      ExtraValues : (obj list) option }
 
 type EnumEntityAttributes =
     { [<JsonPropertyName("friendly_name")>]
