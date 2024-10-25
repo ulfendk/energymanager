@@ -66,7 +66,7 @@ type EntityPayload =
     
     let getClient() = 
         let client = new HttpClient()
-        client.DefaultRequestHeaders.Add("Authorization", $"%s{config.Token}")
+        client.DefaultRequestHeaders.Add("Authorization", $"Bearer %s{config.Token}")
         client
         
     member this.SetEntity(entityName : string, payload : EntityPayload) =

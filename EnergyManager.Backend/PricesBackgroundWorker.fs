@@ -5,11 +5,13 @@ open System.Threading
 open EnergyManager.Backend.Carnot
 open EnergyManager.Backend.Database
 open EnergyManager.Backend.Model
+open EnergyManager.Backend.SpotPrice
+open EnergyManager.Backend.Tariff
 open EnergyManager.Backend.Utils
 open Microsoft.Extensions.Hosting
 open Microsoft.Extensions.Logging
 
-type PricesBackgroundWorker(repo : IDataRepository, eds : EnergiDataService.Config, carnotSource : CarnotSource, logger : ILogger<PricesBackgroundWorker>) =
+type PricesBackgroundWorker(repo : IDataRepository, eds : EnergiDataService.Config, carnotSource : CarnotSource, tariffs : TariffConfig, spotPrices : SpotPrices, logger : ILogger<PricesBackgroundWorker>) =
     let getCarnot() = carnotSource.GetLatest()
     let getEds() = EnergiDataService.Data.getLatest eds
     
@@ -20,10 +22,9 @@ type PricesBackgroundWorker(repo : IDataRepository, eds : EnergiDataService.Conf
           To = ts }
     let DoWork(state : obj) =
         logger.LogInformation("Updating data in the background...")
-        let tariffs = Tariff.Data2.getTariffTree
         let eds = getEds()
 
-        let spotPrices = eds |> Seq.map(fun x -> SpotPrice.mergePriceAndTariff x (Map.find (toNode x.Timestamp) tariffs))
+        let spotPrices = eds |> Seq.map(fun x -> spotPrices.MergePriceAndTariff x (Map.find (toNode x.Timestamp) tariffs.Configured))
         spotPrices |> repo.InsertOrUpdatePrices |> ignore 
         logger.LogInformation("DONE updating data in the background.")
     

@@ -13,6 +13,11 @@ type Region =
         match this with
         | DK1 -> "dk1"
         | DK2 -> "dk2"
+    static member FromString (value: string) =
+        match value with
+        | _ when String.Equals(value, "dk1", StringComparison.OrdinalIgnoreCase) -> DK1
+        | _ when String.Equals(value, "dk2", StringComparison.OrdinalIgnoreCase) -> DK2
+        | _ -> failwith $"Invalid region value: %s{value} - must be one of [dk1, dk2]"
 
 [<JsonConverter(typedefof<UnixDateTimeJsonConverter>)>]        
 [<CustomComparison;CustomEquality>]
@@ -160,8 +165,8 @@ type SpotPrice =
       LastUpdated : UnixDateTime } with
     member this.ToDkk() =
         { this with
-            BasePriceVat = this.BasePriceVat / 100m
-            AllFeesAndVat = this.AllFeesAndVat / 100m
-            ReducedFeesAndVat = this.ReducedFeesAndVat / 100m
-            FullPriceReducedFeeVat = this.FullPriceReducedFeeVat / 100m
-            FullPriceVat = this.FullPriceVat / 100m }
+            BasePriceVat = Decimal.Round(this.BasePriceVat / 100m, 2) 
+            AllFeesAndVat = Decimal.Round(this.AllFeesAndVat / 100m, 2)
+            ReducedFeesAndVat = Decimal.Round(this.ReducedFeesAndVat / 100m, 2)
+            FullPriceReducedFeeVat = Decimal.Round(this.FullPriceReducedFeeVat / 100m, 2)
+            FullPriceVat = Decimal.Round(this.FullPriceVat / 100m, 2) }

@@ -11,7 +11,7 @@ open Giraffe
 open Microsoft.Extensions.Hosting
 open Microsoft.Extensions.Logging
 
-type HomeAssistantBackgroundWorker(api : HomeAssistantApi, repo : IDataRepository, logger : ILogger<HomeAssistantBackgroundWorker>) =
+type HomeAssistantBackgroundWorker(api : HomeAssistantApi, repo : IDataRepository, spotPrices : SpotPrices, logger : ILogger<HomeAssistantBackgroundWorker>) =
     let mutable timer : Timer option = None
 
     let setPrice (sensorName : string, friendlyName : string, price : decimal, date: UnixDateTime) =
@@ -67,8 +67,8 @@ type HomeAssistantBackgroundWorker(api : HomeAssistantApi, repo : IDataRepositor
                     
             findRec value (0m, Unknown) lst
                         
-        let level = SpotPrice.spotPriceLevels |> find price.FullPriceVat
-        let levelReduced = SpotPrice.spotPriceLevels |> find price.FullPriceReducedFeeVat
+        let level = spotPrices.SpotPriceLevels |> find price.FullPriceVat
+        let levelReduced = spotPrices.SpotPriceLevels |> find price.FullPriceReducedFeeVat
 
         let icon(level) =
             match level with
@@ -87,7 +87,7 @@ type HomeAssistantBackgroundWorker(api : HomeAssistantApi, repo : IDataRepositor
                     { FriendlyName = Some $"Spot Price Level%s{label}"
                       Icon = Some (icon level)
                       DeviceClass = Some "enum"
-                      Options = Some (SpotPrice.levels |> List.map (fun x -> $"%A{x}")) } }
+                      Options = Some (spotPrices.ValidLevels |> List.map (fun x -> $"%A{x}")) } }
 
         api.SetEntity("spot_price_level", levelPayload(level, "")) |> ignore
         api.SetEntity("spot_price_reduced_level", levelPayload(levelReduced," Reduced")) |> ignore

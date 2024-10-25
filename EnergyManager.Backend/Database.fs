@@ -31,9 +31,11 @@ type IDataRepository =
 
     abstract GetPrices : hour : UnixDateTime * count : int -> SpotPrice seq
 
-type DataRepository() =
-    // let getConnection() = new SqliteConnection("Data Source=ConfigFiles/data.db")
-    let getConnection() = new SqliteConnection("Data Source=/config/ha/energy_manager/data.db")
+type Config = { DatabaseFilePath : string }
+
+type DataRepository(config : Config) =
+    let getConnection() = new SqliteConnection($"Data Source=%s{config.DatabaseFilePath}")
+
     let mapToDb (spotPrice : SpotPrice) =
         { Hour = spotPrice.Timestamp.Seconds
           BasePriceVat = float (decimal spotPrice.BasePriceVat)

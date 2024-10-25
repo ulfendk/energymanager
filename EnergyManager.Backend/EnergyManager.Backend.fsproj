@@ -12,6 +12,7 @@
     <PackageReference Include="Dapper.FSharp" Version="4.9.0" />
     <PackageReference Include="FSharp.Data" Version="6.4.0" />
     <PackageReference Include="Giraffe" Version="7.0.2" />
+    <PackageReference Include="Giraffe.Razor" Version="5.0.0" />
     <PackageReference Include="Giraffe.ViewEngine" Version="1.4.*" />
     <PackageReference Include="Microsoft.Data.Sqlite" Version="8.0.10" />
     <PackageReference Update="FSharp.Core" Version="8.0.401" />
@@ -63,6 +64,16 @@
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
     <Content Include="ConfigFiles\spotpricelevels.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Watch Include="**\*.cshtml" Exclude="bin\**\*" />
+  </ItemGroup>
+  
+  <ItemGroup>
+    <Content Include="Views\*.cshtml">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
   </ItemGroup>

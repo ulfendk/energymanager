@@ -5,12 +5,14 @@ open System.Collections
 open System.ComponentModel
 open System.IO
 open System.Text.Json
+open System.Text.Json.Serialization
 open System.Threading.RateLimiting
 open EnergyManager.Backend.Background
 open EnergyManager.Backend.Carnot
 open EnergyManager.Backend.Database
 open EnergyManager.Backend.HomeAssistant
 open EnergyManager.Backend.HomeAssistantBackgroundWorker
+open EnergyManager.Backend.SpotPrice
 open EnergyManager.Backend.Tariff
 open EnergyManager.Backend.Utils
 open Microsoft.AspNetCore.Builder
@@ -174,24 +176,86 @@ let configureApp (app : IApplicationBuilder) =
         .UseStaticFiles()
         .UseGiraffe(webApp)
 
+type AppConfig =
+     { [<JsonPropertyName("dk_region")>]
+       Region : string
+       
+       [<JsonPropertyName("carnot_username")>]
+       CarnotUsername : string option
+       
+       [<JsonPropertyName("carnot_api_key")>]
+       CarnotApiKey: string option
+       
+       [<JsonPropertyName("eloverblik_api_key")>]
+       EloverblikApiKey : string option }
+
+let isProduction =
+    let aspEnvironment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT")
+    String.Equals("Production", aspEnvironment, StringComparison.OrdinalIgnoreCase)
+     
+let loadConfiguration (services: IServiceCollection)=
+    let loadDeveloperConfig() =
+        services
+            .AddSingleton<Carnot.Config>(fun s ->
+                let config = s.GetService<IConfiguration>()
+                { Carnot.Config.Region = config["Carnot:Region"]
+                  Username = Some config["Carnot:User"]
+                  ApiKey = Some config["Carnot:ApiKey"] })
+
+            .AddSingleton<HomeAssistant.Config>(fun s ->
+                let config = s.GetService<IConfiguration>()
+                { HomeAssistant.Config.Url = config["HomeAssistant:Url"]
+                  Token = config["HomeAssistant:Token"] })
+
+            .AddSingleton<Tariff.Config>(fun s ->
+                { ConfigFile = "ConfigFiles/tariffconfig.json" })
+            
+            .AddSingleton<Database.Config>(fun s->
+                { DatabaseFilePath = "ConfigFiles/data.db" })
+            
+            .AddSingleton<EnergiDataService.Config>(fun s->
+                let config = s.GetService<IConfiguration>()
+                { EnergiDataService.Config.Region = Region.FromString config["Carnot:Region"] })
+
+            .AddSingleton<SpotPrice.Config>(fun s->
+                { SpotPrice.Config.SpotPriceLevelsFilePath = "ConfigFiles/spotpricelevels.json" })
+
+    let loadAddinConfig() =
+        let json = File.ReadAllText("/data/options.json")
+        let appConfig = JsonSerializer.Deserialize<AppConfig>(json)
+
+        services
+            .AddSingleton<Carnot.Config>(fun s ->
+                { Carnot.Config.Region = appConfig.Region
+                  Username = appConfig.CarnotUsername
+                  ApiKey = appConfig.CarnotApiKey })
+
+            .AddSingleton<HomeAssistant.Config>((fun s ->
+                { HomeAssistant.Config.Url = "http://supervisor/core"
+                  Token = Environment.GetEnvironmentVariable("SUPERVISOR_TOKEN") }))
+
+            .AddSingleton<Tariff.Config>(fun s ->
+                { ConfigFile = "/config/ha/energy_manager/tariffconfig.json" })
+
+            .AddSingleton<Database.Config>(fun s->
+                { DatabaseFilePath = "/config/ha/energy_manager/data.db" })
+
+            .AddSingleton<SpotPrice.Config>(fun s->
+                { SpotPrice.Config.SpotPriceLevelsFilePath = "/config/ha/energy_manager/spotpricelevels.json" })
+            
+    match isProduction with
+    | true -> loadAddinConfig()
+    | false -> loadDeveloperConfig()
+
 let configureServices (services : IServiceCollection) =
+    loadConfiguration services |> ignore
     services.AddCors()    |> ignore
     services.AddGiraffe() |> ignore
+    services.AddSingleton<TariffConfig>() |> ignore
+    services.AddSingleton<SpotPrices>() |> ignore
     services.AddTransient<IDataRepository, DataRepository>() |> ignore
     services.AddHostedService<PricesBackgroundWorker>() |> ignore
-    services.AddSingleton<Carnot.Config>(
-        fun s ->
-            let config = s.GetService<IConfiguration>()
-            { Carnot.Config.Region = config["Carnot:Region"]
-              Carnot.Config.Username = config["Carnot:User"]
-              Carnot.Config.ApiKey = config["Carnot:ApiKey"] }) |> ignore
-    services.AddSingleton<EnergiDataService.Config>(edsConfig)  |> ignore
-    // services.AddSingleton<Tariff.Config>(tariffsConfig) |> ignore
     services.AddSingleton<CarnotSource>() |> ignore
-    services.AddSingleton<HomeAssistant.Config>(
-        fun s ->
-            { HomeAssistant.Config.Url = "http://supervisor/core"
-              Token = Environment.GetEnvironmentVariable("SUPERVISOR_TOKEN") }) |> ignore
     services.AddSingleton<HomeAssistantApi>() |> ignore
     services.AddHostedService<HomeAssistantBackgroundWorker>() |> ignore
     services.AddTransient<ConsoleFormatterOptions, HassAddOnConsoleFormatterOptions>() |> ignore
@@ -210,15 +274,16 @@ let configureLogging (builder : ILoggingBuilder) =
 
 [<EntryPoint>]
 let main args =
-    // if not (Directory.Exists "/config/ha/energy_manager") then
-    //     Directory.CreateDirectory("/config/ha/energy_manager") |> ignore
-    //
-    // Directory.GetFiles("ConfigFiles")
-    // |> Seq.map (fun x -> FileInfo(x))
-    // |> Seq.iter (fun x ->
-    //     let destinationFile = $"/config/ha/energy_manager/%s{x.Name}"
-    //     if not (File.Exists(destinationFile)) then
-    //         File.Copy(x.FullName, destinationFile))
+    if isProduction then
+        if not (Directory.Exists "/config/ha/energy_manager") then
+            Directory.CreateDirectory("/config/ha/energy_manager") |> ignore
+        
+        Directory.GetFiles("ConfigFiles")
+        |> Seq.map (fun x -> FileInfo(x))
+        |> Seq.iter (fun x ->
+            let destinationFile = $"/config/ha/energy_manager/%s{x.Name}"
+            if not (File.Exists(destinationFile)) then
+                File.Copy(x.FullName, destinationFile))
 
     let contentRoot = Directory.GetCurrentDirectory()
     let webRoot     = Path.Combine(contentRoot, "WebRoot")
