@@ -13,49 +13,71 @@ open Microsoft.Extensions.Logging
 
 type FuturePrice =
     { Hour : string
-      Price : Decimal }
+      Price : Decimal
+      IsActual : bool }
 
 type HomeAssistantBackgroundWorker(api : HomeAssistantApi, repo : IDataRepository, spotPrices : SpotPrices, logger : ILogger<HomeAssistantBackgroundWorker>) =
     let mutable timer : Timer option = None
 
-    let setPrice (sensorName : string, friendlyName : string, price : decimal, date: UnixDateTime) =
+    // let setPrice (sensorName : string, friendlyName : string, price : decimal, date: UnixDateTime) =
+    //     let spotPricePayload =
+    //         ValueSensor {
+    //             State = $"%M{price}"
+    //             LastUpdated = Some (date.ToDateTimeOffset())
+    //             Attributes = Some
+    //                 { FriendlyName = Some friendlyName
+    //                   Icon = Some "mdi:cash"
+    //                   DeviceClass = Some "monetary"
+    //                   UnitOfMeasurement = Some "DKK/kWh"
+    //                   ExtraValues = None } }
+    //     api.SetEntity(sensorName, spotPricePayload) |> ignore
+
+    let setPrice2 (sensorName : string, friendlyName : string, selector : SpotPrice -> decimal, prices : SpotPrice list) =
+        let price = prices |> List.head
+        let futurePrices =
+            prices
+            |> List.map (fun x -> (x.Timestamp.ToDateTimeOffset().ToIsoString(), selector(x), x.IsPrediction))
+
         let spotPricePayload =
             ValueSensor {
-                State = $"%M{price}"
-                LastUpdated = Some (date.ToDateTimeOffset())
+                State = $"%M{selector(price)}"
+                LastUpdated = Some (price.LastUpdated.ToDateTimeOffset())
                 Attributes = Some
                     { FriendlyName = Some friendlyName
                       Icon = Some "mdi:cash"
                       DeviceClass = Some "monetary"
                       UnitOfMeasurement = Some "DKK/kWh"
-                      ExtraValues = None } }
+                      ExtraValues = Some (futurePrices |> List.map (fun (h, p, b) -> { Hour = h; Price = p; IsActual = not b })) }}
         api.SetEntity(sensorName, spotPricePayload) |> ignore
     
     let DoWork(state : obj) =
         logger.LogInformation("Updating Home Assistant entities")
 
-        let prices = repo.GetPrices(UnixDateTime.Now(), 7 * 24) |> Seq.map (_.ToDkk()) |> Seq.toList
-        let price = prices |> List.head
-        let futurePrices =
-            prices
-            |> List.skip 1
-            |> List.map (fun x -> (x.Timestamp.ToDateTimeOffset().ToIsoString(), x.FullPriceVat))
-        let spotPricePayload =
-            ValueSensor {
-                State = $"%M{price.FullPriceVat}"
-                LastUpdated = Some (price.LastUpdated.ToDateTimeOffset())
-                Attributes = Some
-                    { FriendlyName = Some "Spot Price"
-                      Icon = Some "mdi:cash"
-                      DeviceClass = Some "monetary"
-                      UnitOfMeasurement = Some "DKK/kWh"
-                      ExtraValues = Some (futurePrices |> List.map (fun (h, p) -> { Hour = h; Price = p })) }}
-        api.SetEntity("spot_price", spotPricePayload) |> ignore
+        // THIS NEEDS WORK - use MAP???
+        let prices = repo.GetPrices(UnixDateTime.Now(), 24*7) |> Seq.map (_.ToDkk()) |> Seq.toList
+        // let allDayprices = repo.GetPrices(UnixDateTime.Today(), 7 * 24) |> Seq.map (_.ToDkk()) |> Seq.toList
+        // let price = prices |> List.head
+        // let futurePrices =
+        //     prices
+        //     // |> List.skip 1
+        //     |> List.map (fun x -> (x.Timestamp.ToDateTimeOffset().ToIsoString(), x.FullPriceVat, x.IsPrediction))
+        // let spotPricePayload =
+        //     ValueSensor {
+        //         State = $"%M{price.FullPriceVat}"
+        //         LastUpdated = Some (price.LastUpdated.ToDateTimeOffset())
+        //         Attributes = Some
+        //             { FriendlyName = Some "Spot Price"
+        //               Icon = Some "mdi:cash"
+        //               DeviceClass = Some "monetary"
+        //               UnitOfMeasurement = Some "DKK/kWh"
+        //               ExtraValues = Some (futurePrices |> List.map (fun (h, p, b) -> { Hour = h; Price = p; IsActual = not b })) }}
+        // api.SetEntity("spot_price", spotPricePayload) |> ignore
 
-        setPrice("spot_price_reduced", "Spot Price Reduced", price.FullPriceReducedFeeVat, price.LastUpdated)
-        setPrice("spot_price_base_vat", "Spot Price Base with VAT", price.BasePriceVat, price.LastUpdated)
-        setPrice("spot_price_fees_vat", "Spot Price Fees with VAT", price.AllFeesAndVat, price.LastUpdated)
-        setPrice("spot_price_fees_reduced_vat", "Spot Price Reduced Fees with VAT", price.ReducedFeesAndVat, price.LastUpdated)
+        setPrice2("spot_price", "Spot Price", (fun (x : SpotPrice) -> x.FullPriceVat), prices)
+        setPrice2("spot_price_reduced", "Spot Price Reduced", (fun (x : SpotPrice) -> x.FullPriceReducedFeeVat), prices)
+        setPrice2("spot_price_base_vat", "Spot Price Base with VAT", (fun (x : SpotPrice) -> x.BasePriceVat), prices)
+        setPrice2("spot_price_fees_vat", "Spot Price Fees with VAT", (fun (x : SpotPrice) -> x.AllFeesAndVat), prices)
+        setPrice2("spot_price_fees_reduced_vat", "Spot Price Reduced Fees with VAT", (fun (x : SpotPrice) -> x.ReducedFeesAndVat), prices)
 
         let find (value: decimal) (lst : (decimal * SpotPriceLevel) list ) =
             let rec findRec (value: decimal) (acc : decimal * SpotPriceLevel) (lst : (decimal * SpotPriceLevel) list ) =
@@ -71,6 +93,7 @@ type HomeAssistantBackgroundWorker(api : HomeAssistantApi, repo : IDataRepositor
                     
             findRec value (0m, Unknown) lst
                         
+        let price = prices |> List.head
         let level = spotPrices.SpotPriceLevels |> find price.FullPriceVat
         let levelReduced = spotPrices.SpotPriceLevels |> find price.FullPriceReducedFeeVat
 

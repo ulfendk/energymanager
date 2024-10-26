@@ -41,6 +41,10 @@ type UnixDateTime =
 
     static member Now() = UnixDateTime.FromDateTime(DateTimeOffset.Now)
 
+    static member Today() =
+        let today = DateTimeOffset.Now.Date
+        UnixDateTime.FromDateTime(DateTimeOffset(DateOnly.FromDateTime(today), TimeOnly(0), TimeZoneInfo.Local.GetUtcOffset(today)))
+
     member this.ToDateTimeOffset() = DateTimeOffset.FromUnixTimeSeconds(this.Seconds).ToLocalTime()
         
     override this.Equals other =

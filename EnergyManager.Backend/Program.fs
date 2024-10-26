@@ -202,6 +202,10 @@ let loadConfiguration (services: IServiceCollection)=
                   Username = Some config["Carnot:User"]
                   ApiKey = Some config["Carnot:ApiKey"] })
 
+            .AddSingleton<EnergiDataService.Config>(fun s ->
+                let config = s.GetService<IConfiguration>()
+                { EnergiDataService.Config.Region = Region.FromString config["Carnot:Region"] })
+
             .AddSingleton<HomeAssistant.Config>(fun s ->
                 let config = s.GetService<IConfiguration>()
                 { HomeAssistant.Config.Url = config["HomeAssistant:Url"]
@@ -230,9 +234,12 @@ let loadConfiguration (services: IServiceCollection)=
                   Username = appConfig.CarnotUsername
                   ApiKey = appConfig.CarnotApiKey })
 
-            .AddSingleton<HomeAssistant.Config>((fun s ->
+            .AddSingleton<EnergiDataService.Config>(fun s ->
+                { EnergiDataService.Config.Region = Region.FromString appConfig.Region })
+
+            .AddSingleton<HomeAssistant.Config>(fun s ->
                 { HomeAssistant.Config.Url = "http://supervisor/core"
-                  Token = Environment.GetEnvironmentVariable("SUPERVISOR_TOKEN") }))
+                  Token = Environment.GetEnvironmentVariable("SUPERVISOR_TOKEN") })
 
             .AddSingleton<Tariff.Config>(fun s ->
                 { ConfigFile = "/config/ha/energy_manager/tariffconfig.json" })
@@ -254,10 +261,10 @@ let configureServices (services : IServiceCollection) =
     services.AddSingleton<TariffConfig>() |> ignore
     services.AddSingleton<SpotPrices>() |> ignore
     services.AddTransient<IDataRepository, DataRepository>() |> ignore
-    services.AddHostedService<PricesBackgroundWorker>() |> ignore
     services.AddSingleton<CarnotSource>() |> ignore
     services.AddSingleton<HomeAssistantApi>() |> ignore
     services.AddHostedService<HomeAssistantBackgroundWorker>() |> ignore
+    services.AddHostedService<PricesBackgroundWorker>() |> ignore
     services.AddTransient<ConsoleFormatterOptions, HassAddOnConsoleFormatterOptions>() |> ignore
 
 let configureAppConfiguration  (context: WebHostBuilderContext) (config: IConfigurationBuilder) =
