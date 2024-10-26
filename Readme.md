@@ -77,7 +77,7 @@ These are the defaults:
 
 ![img.png](img/graph_2d.png)
 
-```json
+```yaml
 type: custom:apexcharts-card
 experimental:
   color_threshold: true
@@ -120,7 +120,7 @@ series:
 
 ![img.png](img/graph_6d.png)
 
-```json
+```yaml
 type: custom:apexcharts-card
 experimental:
   color_threshold: true
