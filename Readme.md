@@ -73,90 +73,84 @@ These are the defaults:
 ]
 ```
 
-## 2 Days Graph
-
-![img.png](img/graph_2d.png)
-
-```yaml
-type: custom:apexcharts-card
-experimental:
-  color_threshold: true
-header:
-  show: true
-  title: Elpriser (2 døgn)
-now:
-  show: true
-  label: Nu
-span:
-  start: day
-graph_span: 48h
-yaxis:
-  - min: 0
-    max: ~4
-series:
-  - entity: sensor.energy_manager_spot_price
-    type: column
-    stroke_width: 0
-    data_generator: |
-      return entity.attributes.extra_values.map((start, index) => {
-        return [new Date(start["Hour"]).getTime(), entity.attributes.extra_values[index]["Price"]];
-      });
-    color_threshold:
-      - value: -10
-        color: blue
-      - value: 0
-        color: darkgreen
-      - value: 0.5
-        color: green
-      - value: 1.5
-        color: orange
-      - value: 2.5
-        color: red
-      - value: 4
-        color: crimson
-```
-
-## 6 Days Graph
-
-![img.png](img/graph_6d.png)
+## Graph
+![img.png](img/graph.png)
 
 ```yaml
 type: custom:apexcharts-card
 experimental:
-  color_threshold: true
+   color_threshold: true
 header:
-  show: true
-  title: Elpriser (6 døgn)
+   show: true
+   title: Elpriser (6 døgn)
 now:
-  show: true
-  label: Nu
+   show: true
+   label: Nu
 span:
-  start: day
+   start: day
 graph_span: 144h
 yaxis:
-  - min: 0
-    max: ~4
+   - min: 0
+     max: ~4
 series:
-  - entity: sensor.energy_manager_spot_price
-    type: area
-    show:
-      extremas: true
-    stroke_width: 0
-    data_generator: |
-      return entity.attributes.extra_values.map((start, index) => {
-        return [new Date(start["Hour"]).getTime(), entity.attributes.extra_values[index]["Price"]];
-      });
-    color_threshold:
-      - value: -10
-        color: blue
-      - value: 0
-        color: darkgreen
-      - value: 0.5
-        color: green
-      - value: 1.5
-        color: orange
-      - value: 2.5
-        color: red
-      - value: 4
-        color: crimson
+   - entity: sensor.energy_manager_spot_price
+     name: Spotpris
+     type: column
+     show:
+        extremas: true
+     stroke_width: 0
+     data_generator: >
+        return entity.attributes.extra_values.filter(x =>
+        x["IsActual"]).map((start, index) => {
+          return [new Date(start["Hour"]).getTime(), entity.attributes.extra_values[index]["Price"]];
+        });
+     color_threshold:
+        - value: -10
+          color: blue
+          opacity: 1
+        - value: 0
+          color: darkgreen
+          opacity: 1
+        - value: 0.5
+          color: green
+          opacity: 1
+        - value: 1.5
+          color: orange
+          opacity: 1
+        - value: 2.5
+          color: red
+          opacity: 1
+        - value: 4
+          color: crimson
+          opacity: 1
+   - entity: sensor.energy_manager_spot_price
+     name: Prisgæt
+     type: area
+     show:
+        extremas: true
+     stroke_width: 0
+     data_generator: >
+        return entity.attributes.extra_values.filter(x =>
+        !x["IsActual"]).map((start, index) => {
+          return [new Date(start["Hour"]).getTime(), entity.attributes.extra_values[index]["Price"]];
+        });
+     color_threshold:
+        - value: -10
+          color: blue
+          opacity: 0.5
+        - value: 0
+          color: darkgreen
+          opacity: 0.5
+        - value: 0.5
+          color: green
+          opacity: 0.5
+        - value: 1.5
+          color: orange
+          opacity: 0.5
+        - value: 2.5
+          color: red
+          opacity: 0.5
+        - value: 4
+          color: crimson
+          opacity: 0.5
 ```

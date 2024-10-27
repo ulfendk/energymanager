@@ -19,7 +19,8 @@ module Data =
         $"https://whale-app-dquqw.ondigitalocean.app/openapi/get_predict?energysource=spotprice&region=%s{region}&daysahead=7"
 
     let private carnotJson (region: string, username : string, apiKey : string) =
-        Http.RequestString(carnotUrl region,[], [ ("accept", "application/json"); ("apikey", apiKey); ("username", username) ])
+        let json = Http.RequestString(carnotUrl region,[], [ ("accept", "application/json"); ("apikey", apiKey); ("username", username) ])
+        json
     let private data (region: string, username : string, apiKey : string) = CarnotProvider.Parse(carnotJson (region, username, apiKey))
 
     let getLatest( config : Config ) =

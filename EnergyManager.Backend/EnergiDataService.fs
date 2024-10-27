@@ -24,7 +24,8 @@ module Data =
     let getLatest(config : Config) =
         let actual = data config
         actual.Records |> Seq.map(fun x->
-            { Timestamp  = x.HourDk |> Utils.asLocalDateTimeOffset |> UnixDateTime.FromDateTime
+            { Timestamp  = DateTimeOffset(x.HourUtc.Year, x.HourUtc.Month, x.HourUtc.Day, x.HourUtc.Hour, x.HourUtc.Minute, x.HourUtc.Second, TimeSpan(0)) |>   UnixDateTime.FromDateTime
+            // { Timestamp  = x.HourDk |> Utils.asLocalDateTimeOffset |> UnixDateTime.FromDateTime
               Region = config.Region.Value
               Price = x.SpotPriceDkk / 10m
               IsActual = true
